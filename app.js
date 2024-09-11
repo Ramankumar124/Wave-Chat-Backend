@@ -30,11 +30,17 @@ io.on("connection", (socket) => {
         console.log("A user disconnected");
     });
 
-    socket.on("message",msg=>{
-    socket.emit("new-message",msg);
-        console.log("msg is",msg);
+    // socket.on("message",msg=>{
+    // socket.emit("new-message",msg);
+    //     console.log("msg is",msg);
+        
+    // })
+    socket.on('joinroom',chatid=>{
+        socket.join(chatid);
+        console.log(`User joined chat romm :${chatid}`);
         
     })
+    socket.on('sendMessage',async ({}))
 
 });
 

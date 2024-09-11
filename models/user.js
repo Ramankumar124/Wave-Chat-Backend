@@ -5,9 +5,12 @@ mongoose.connect("mongodb://localhost:27017/Wave Chat");
 const userSchema = mongoose.Schema({
     name: String,
     phoneNo: Number,
-    messages: [{
-        type: mongoose.Schema.Types.ObjectId
+    password: String,
+    contacts: [],
+    chats: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Chat'
     }
     ]
-})
-module.exports=mongoose.model("user",userSchema);
+},{timestamps:true});
+module.exports = mongoose.model("User", userSchema);
