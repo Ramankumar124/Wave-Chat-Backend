@@ -1,5 +1,6 @@
 const userModel = require('../models/user');
 const bcrypt = require('bcrypt');
+const { generateToken } = require('../utils/genrateToken');
 
 module.exports.registerUser = async function (req, res) {
     const { email, password, phone, name } = req.body;
@@ -28,7 +29,8 @@ module.exports.registerUser = async function (req, res) {
                         password: hash,
                         phone,
                     });
-
+                    let token=generateToken(newUser);
+                    res.cookie("token",token);
                     // Respond after user creation
                     return res.status(201).json({ message: 'User registered successfully', user: newUser });
                 } catch (error) {
@@ -50,7 +52,8 @@ module.exports.loginUser=async function(req,res){
             bcrypt.compare(Password,user.password,function(err,result){
                 if(result){
                     console.log(result);
-                    
+                    let token=generateToken(user);
+                    res.cookie("token",token);
                     res.status(200).json({message:'User Found',User:user});
 
                 }
