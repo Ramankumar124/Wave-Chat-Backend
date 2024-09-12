@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
-mongoose.connect("mongodb://localhost:27017/Wave Chat");
+mongoose.connect("mongodb://localhost:27017/wave-chat");
 
 const userSchema = mongoose.Schema({
     name: String,
-    phoneNo: Number,
+    phone: Number,
+    email:String,
     password: String,
     contacts: [],
     chats: [{

@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { registerUser } = require('./controllers/authController');
+const { registerUser ,loginUser} = require('./controllers/authController');
 require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT;
@@ -53,6 +53,7 @@ app.use(cors());
     
 // });
 app.post('/register',registerUser);
+app.post('/login',loginUser)
 // app.post('/login',loginUser)
 
 // Listen using `server.listen()` to handle both HTTP and WebSockets
