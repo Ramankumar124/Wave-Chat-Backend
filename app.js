@@ -4,7 +4,9 @@ const { registerUser ,loginUser} = require('./controllers/authController');
 require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT;
-const cookieParser=require('cookie-parser')
+const cookieParser=require('cookie-parser');
+const { userData } = require('./routes/userData');
+const { isLogin } = require('./middlewares/isLogin');
 // const http = require('http');
 // const { Server } = require("socket.io");
 
@@ -59,6 +61,11 @@ app.use(cors({
 // });
 app.post('/register',registerUser);
 app.post('/login',loginUser)
+// app.get('/userData',isLogin,userData)
+app.get('/userData', isLogin, (req, res) => {
+    // Access the logged-in user via req.user
+    res.status(200).json({ user: req.user });
+});
 // app.post('/login',loginUser)
 
 // Listen using `server.listen()` to handle both HTTP and WebSockets

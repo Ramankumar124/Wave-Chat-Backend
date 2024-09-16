@@ -7,7 +7,12 @@ const userSchema = mongoose.Schema({
     phone: Number,
     email:String,
     password: String,
-    contacts: [],
+    contacts:[
+        {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:'User'
+        }
+    ],
     chats: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Chat'
