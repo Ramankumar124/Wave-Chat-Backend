@@ -7,6 +7,7 @@ const PORT = process.env.PORT;
 const cookieParser=require('cookie-parser');
 const { userData } = require('./routes/userData');
 const { isLogin } = require('./middlewares/isLogin');
+const userModel =require('../Backend/models/user')
 // const http = require('http');
 // const { Server } = require("socket.io");
 
@@ -62,9 +63,10 @@ app.use(cors({
 app.post('/register',registerUser);
 app.post('/login',loginUser)
 // app.get('/userData',isLogin,userData)
-app.get('/userData', isLogin, (req, res) => {
+app.get('/userContacts', isLogin, async (req, res) => {
     // Access the logged-in user via req.user
-    res.status(200).json({ user: req.user });
+    const user=await userModel.findOne({email:req.user.email}).populate('contacts')
+    res.status(200).json(user.contacts);
 });
 // app.post('/login',loginUser)
 
