@@ -1,8 +1,8 @@
-const mongoose=require('mongoose')
-const {isLogin } =require('../middlewares/isLogin')
-module.exports.userData= async(req,res,)=>{
-isLogin
-    console.log(req.user);
-    res.json(req.user)
+const userModel = require('../models/user')
+
+// getting user contacts 
+module.exports.userContacts= async(req,res,)=>{
+    const user=await userModel.findOne({email:req.user.email}).populate('contacts')
+    res.status(200).json(user.contacts);
     
 }
