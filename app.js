@@ -5,7 +5,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT;
 const cookieParser=require('cookie-parser');
-const { userContacts } = require('./routes/userData');
+const { userData } = require('./routes/userData');
 const { isLogin } = require('./middlewares/isLogin');
 
 
@@ -20,7 +20,7 @@ app.use(cors({
 app.post('/register',registerUser);
 app.post('/login',loginUser)
 
-app.get('/userContacts', isLogin,userContacts );
+app.get('/userData', isLogin,userData );
 
 app.listen(PORT, function () {
     console.log(`Server running at Port ${PORT}`);
