@@ -10,6 +10,10 @@ const messageSchema=mongoose.Schema({
     ref:'User'
  },
  content:String,
+ chatId:{
+   type:mongoose.Schema.Types.ObjectId,
+   ref:'Chat'
+ }
  
 },{timestamps:true});
 

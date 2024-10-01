@@ -1,27 +1,41 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { registerUser ,loginUser} = require('./controllers/authController');
-require('dotenv').config();
-const app = express();
-const PORT = process.env.PORT;
-const cookieParser=require('cookie-parser');
-const { userData } = require('./routes/userData');
+const cookieParser = require('cookie-parser');
+
+
 const { isLogin } = require('./middlewares/isLogin');
+const { userData } = require('./routes/userData');
+const authRoutes = require('./routes/authRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
+const app = express();
 
+// middleware
 app.use(express.json());
-app.use(cookieParser())
-app.use(cors({
+app.use(cookieParser());
+app.use(
+  cors({
     origin: 'http://localhost:5173',
-    credentials: true
-})
+    credentials: true,
+  })
 );
+try {
 
-app.post('/register',registerUser);
-app.post('/login',loginUser)
+  app.use('/auth', authRoutes)
+  app.use('/chat', isLogin, chatRoutes)
+  app.get('/', (req, res) => {
+    res.send('Server is running');
+  });
+  app.get('/userData', isLogin, userData);
+  console.log(
+    "routes look perfect"
+  );
 
-app.get('/userData', isLogin,userData );
+} catch (error) {
+  console.log(error);
 
-app.listen(PORT, function () {
-    console.log(`Server running at Port ${PORT}`);
-});
+
+}
+
+module.exports = app;

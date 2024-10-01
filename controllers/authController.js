@@ -69,14 +69,29 @@ module.exports.loginUser = async function (req, res) {
             })
         }
         else {
-            res.status(401).json({ message: "Wrong Crendials" })
+            res.status(401).json({ message: "Wrong Crendials......." })
 
         }
     } catch (error) {
-        res.status(500).json({ message: "Wrong Crendials" })
-
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 
 
+
+}
+
+module.exports.logoutUser= function (req, res) {
+
+    try {
+        if (req.cookies?.token) {
+            res.cookie("token", "");
+            res.status(200).json({ message: 'user signedout' })
+        }
+        else{
+            res.status(500).json({ message: "Cokkie not found" })
+        }
+    } catch (error) {
+        res.status(500).json({ message: "internal server error", error })
+    }
 
 }
