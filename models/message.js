@@ -10,6 +10,7 @@ const messageSchema=mongoose.Schema({
     ref:'User'
  },
  content:String,
+ image:String,
  chatId:{
    type:mongoose.Schema.Types.ObjectId,
    ref:'Chat'

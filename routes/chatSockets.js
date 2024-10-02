@@ -8,9 +8,10 @@ const handleChatSockets=(socket,io)=>{
            
        })
        
-       socket.on('sendMessage',async ({roomId,message,currentUserId,contactUserId })=>{
-         io.to(roomId).emit('receiveMessage',{roomId,message,currentUserId,contactUserId})
-   
+       socket.on('sendMessage',async ({roomId,message,selectedImage,currentUserId,contactUserId })=>{
+         io.to(roomId).emit('receiveMessage',{roomId,message,selectedImage,currentUserId,contactUserId})
+  
+    
         let  chat = await chatModel.findOne({
            participent: { $all: [currentUserId, contactUserId] }
          }).populate('messages');
@@ -26,12 +27,13 @@ const handleChatSockets=(socket,io)=>{
            sender:currentUserId,
            recipient:contactUserId,
            content:message,
+           image:selectedImage,
            chatId:chat._id
          })
    
          chat.messages.push(newMessage._id);
          await chat.save();
-         console.log(" msg sended",newMessage);
+        //  console.log(" msg sended",newMessage);
          
        })
 }
