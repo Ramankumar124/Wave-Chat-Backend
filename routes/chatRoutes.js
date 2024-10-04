@@ -16,7 +16,7 @@ router.get('/:contactUserId',isLogin ,async(req, res) => {
         participent: { $all: [userId, contactUserId] }
       }).populate('messages');
   
-      console.log("Chats are: ", chat);
+      // console.log("Chats are: ", chat);
   
       if (!chat) {
         console.log("No chat found");

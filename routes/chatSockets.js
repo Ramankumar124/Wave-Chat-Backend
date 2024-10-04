@@ -35,7 +35,19 @@ const handleChatSockets=(socket,io)=>{
          await chat.save();
         //  console.log(" msg sended",newMessage);
          
+       }
+      
+      )
+      
+       socket.on('Typing-indicator',async (roomId,currentUserId)=>{
+        io.to(roomId).emit('Typing',currentUserId)
+        
+       });
+       socket.on('Stop-typing',async (roomId)=>{
+        io.to(roomId).emit('typing-stop');
+        
        })
+      
 }
 
 module.exports={handleChatSockets};
