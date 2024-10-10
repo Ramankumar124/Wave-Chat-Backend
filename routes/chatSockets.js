@@ -9,8 +9,10 @@ const handleChatSockets=(socket,io)=>{
        })
        
        socket.on('sendMessage',async ({roomId,message,selectedImage,currentUserId,contactUserId })=>{
+        console.log(roomId,message,selectedImage,currentUserId,contactUserId);
+        
          io.to(roomId).emit('receiveMessage',{roomId,message,selectedImage,currentUserId,contactUserId})
-  
+        
     
         let  chat = await chatModel.findOne({
            participent: { $all: [currentUserId, contactUserId] }
@@ -40,7 +42,7 @@ const handleChatSockets=(socket,io)=>{
       )
       
        socket.on('Typing-indicator',async (roomId,currentUserId)=>{
-        io.to(roomId).emit('Typing',currentUserId)
+        io.to(roomId).emit('Typing',roomId,currentUserId)
         
        });
        socket.on('Stop-typing',async (roomId)=>{
