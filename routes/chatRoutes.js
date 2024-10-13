@@ -5,17 +5,17 @@ const chatModel = require("../models/chat");
 
 
 
-router.get('/:contactUserId', isLogin, async (req, res) => {
+router.get('/:selectedChatId', isLogin, async (req, res) => {
   try {
     const userId = req.user._id;
-    const contactUserId = req.params.contactUserId;
+    const selectedChatId = req.params.selectedChatId;
 
     const page = parseInt(req.query.page) || 1;
     const limit = 10;  // Limit the number of messages per page
     
     // Step 1: Count messages specific to the chat between two users
     const chat = await chatModel.findOne({
-      participent: { $all: [userId, contactUserId] }
+      participent: { $all: [userId, selectedChatId] }
     });
 
     if (!chat) {
@@ -33,7 +33,7 @@ router.get('/:contactUserId', isLogin, async (req, res) => {
 
     // Step 2: Fetch the messages with pagination
     let paginatedChat = await chatModel.findOne({
-      participent: { $all: [userId, contactUserId] }
+      participent: { $all: [userId, selectedChatId] }
     }).populate({
       path: 'messages',
       options: {
