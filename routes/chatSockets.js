@@ -1,8 +1,15 @@
 const chatModel = require("../models/chat");
 const messageModel = require('../models/message');
 const user = require("../models/user");
-
+const messaging = require("../config/firabase/firebaseAdmin");
+const {sendFirebaseMessage }=require("../Services/firebaseServie")
 let connection = [];
+
+  
+
+  
+
+
 const handleChatSockets = (socket, io) => {
 
   socket.on("setup", (data) => {
@@ -23,19 +30,27 @@ const handleChatSockets = (socket, io) => {
 
   })
 
-  socket.on('sendMessage', async ({ roomId, message, selectedImage, currentUserId, contactUserId }) => {
+  socket.on('sendMessage', async ({ roomId, message, selectedImage, currentUserId, contactUserId ,reciverFBToken,reciverName
+  }) => {
     console.log(roomId, message, selectedImage, currentUserId, contactUserId);
 
     io.to(roomId).emit('receiveMessage', { roomId, message, selectedImage, currentUserId, contactUserId })
-
+     io.to(contactUserId).emit("soundpopup");
     let user = connection.find((user)=>user.socketId==contactUserId)
-  console.log("user socket id",user.socketId);
-  console.log(connection);
-  console.log("socketid  "+user.socketId + " contactuserid  "+contactUserId);
-  
-  console.log(currentUserId);
-    let socketUserName=user.username;
-    io.to(user.socketId).emit("notify",{ message,currentUserId,socketUserName});
+    if(user){
+      console.log("user socket id",user.socketId);
+      console.log(connection);
+      console.log("socketid  "+user.socketId + " contactuserid  "+contactUserId);
+      
+      console.log(currentUserId);
+        let socketUserName=user.username;
+        io.to(user.socketId).emit("notify",{ message,currentUserId,socketUserName});
+    }
+
+
+// send notification with  firebase 
+sendFirebaseMessage(message,reciverFBToken,reciverName);
+
 
 
     let chat = await chatModel.findOne({
@@ -74,6 +89,22 @@ const handleChatSockets = (socket, io) => {
 
   })
 
+  // call socket 
+
+  socket.on('join-call-room', (contactUserId,roomId, userPeerId,data) => {
+    socket.join(roomId);
+    // Notify other users in the room of a new participant to start the call
+    io.to(contactUserId).emit('incomming-call',data);
+    socket.to(roomId).emit('start-call', userPeerId);
+
+   
+  });
+  socket.on("call-declined",(id)=>{  
+      io.to(id).emit("call-rejected");
+  })
+  socket.on("call-Ended",(room)=>{
+     io.to(room).emit("send-call-ended");
+  })
 }
 
 module.exports = { handleChatSockets };
