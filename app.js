@@ -8,7 +8,7 @@ const { isLogin } = require('./middlewares/isLogin');
 const { userData } = require('./routes/userData');
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-
+const notificationRoute=require('./controllers/notificationController')
 const app = express();
 
 // middleware
@@ -28,6 +28,7 @@ try {
     res.send('Server is running');
   });
   app.get('/userData', isLogin, userData);
+  app.use('/Notification',isLogin,notificationRoute)
   console.log(
     "routes look perfect"
   );
