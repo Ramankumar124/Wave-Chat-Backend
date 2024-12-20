@@ -98,10 +98,10 @@ module.exports.logoutUser= function (req, res) {
 module.exports.googleLogin=async function (req,res){
     const {data}=req.body;
     try {
-       console.log(data.user);
+    //    console.log("data google login",data.user);
        
         const user=await userModel.findOne({email:data.user.email})
-        console.log(user);
+        // console.log(user);
         if(!user){
             console.log("not found user");
             const newUser = await userModel.create({
@@ -113,7 +113,7 @@ module.exports.googleLogin=async function (req,res){
          return res.status(200).json({ message: 'User registered with google successfully', user: newUser });
         }
         else{
-            console.log(" user",user);
+            // console.log(" user",user);
             let token = generateToken(user);
             res.cookie("token", token);
          return   res.status(200).json({ message: 'Loggedin with google', User: user });

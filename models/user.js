@@ -15,13 +15,29 @@ const userSchema = mongoose.Schema({
     chats: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Chat'
-    }
+    } 
     ],
     firebaseToken: String,
     isOnline: {
         type: Boolean,
         default: false
-    }
+    },
+
+  friendRequest: {
+      sent: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+      ],
+      received: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+      ],
+    },
+  
 
 
 }, { timestamps: true });

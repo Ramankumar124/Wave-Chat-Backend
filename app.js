@@ -5,7 +5,7 @@ const cookieParser = require('cookie-parser');
 
 
 const { isLogin } = require('./middlewares/isLogin');
-const { userData } = require('./routes/userData');
+const { userData, AllUserList } = require('./routes/userData');
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const notificationRoute=require('./controllers/notificationController')
@@ -28,6 +28,7 @@ try {
     res.send('Server is running');
   });
   app.get('/userData', isLogin, userData);
+  app.get('/get-all-users',AllUserList);
   app.use('/Notification',isLogin,notificationRoute)
   console.log(
     "routes look perfect"

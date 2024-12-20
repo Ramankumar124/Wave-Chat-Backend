@@ -12,10 +12,10 @@ let onlineUser = [];
 
 const handleChatSockets = (socket, io) => {
 
-  socket.on("setup",({data,OrignalSocketId}) => {
+  socket.on("setup", ({ data, OrignalSocketId }) => {
     socket.join(data._id);
     console.log(OrignalSocketId);
-    
+
     connection.push(
 
       {
@@ -25,27 +25,27 @@ const handleChatSockets = (socket, io) => {
 
     )
     onlineUser.push({
-        OrignalSocketId,
-        username: data.name,
-        email: data.email
+      OrignalSocketId,
+      username: data.name,
+      email: data.email
     })
-  console.log(`${data.name} joined server socket`);
-  console.log("online users ",onlineUser);
+    console.log(`${data.name}  with id ${data._id} joined server socket`);
+    console.log("online users ", onlineUser);
 
-  io.emit("Online-Users",onlineUser);
-})
+    io.emit("Online-Users", onlineUser);
+  })
 
 
-socket.on("disconnect",()=>{
-  console.log("user disconncted:",socket.id);
-  let newOnlineUser = onlineUser.filter((user) => user.OrignalSocketId !== socket.id);
+  socket.on("disconnect", () => {
+    console.log("user disconncted:", socket.id);
+    let newOnlineUser = onlineUser.filter((user) => user.OrignalSocketId !== socket.id);
 
-onlineUser=newOnlineUser;
-console.log(onlineUser);
+    onlineUser = newOnlineUser;
+    console.log(onlineUser);
 
-io.emit("Online-Users",onlineUser);
-  
-})
+    io.emit("Online-Users", onlineUser);
+
+  })
 
   socket.on('join-room', ({ roomId, userId }) => {
     socket.join(roomId);
@@ -53,81 +53,162 @@ io.emit("Online-Users",onlineUser);
 
   })
 
-socket.on('sendMessage', async ({ roomId, message, selectedImage, currentUserId, contactUserId, reciverFBToken, reciverName
-}) => {
-  console.log(roomId, message, selectedImage, currentUserId, contactUserId);
+  socket.on('sendMessage', async ({ roomId, message, selectedImage, currentUserId, contactUserId, reciverFBToken, reciverName
+  }) => {
+    console.log(roomId, message, selectedImage, currentUserId, contactUserId);
 
-  io.to(roomId).emit('receiveMessage', { roomId, message, selectedImage, currentUserId, contactUserId })
-  io.to(contactUserId).emit("soundpopup");
-  let user = connection.find((user) => user.socketId == contactUserId)
-  if (user) {
-    console.log("user socket id", user.socketId);
-    console.log(connection);
-    console.log("socketid  " + user.socketId + " contactuserid  " + contactUserId);
+    io.to(roomId).emit('receiveMessage', { roomId, message, selectedImage, currentUserId, contactUserId })
+    io.to(contactUserId).emit("soundpopup");
+    let user = connection.find((user) => user.socketId == contactUserId)
+    if (user) {
+      console.log("user socket id", user.socketId);
+      console.log(connection);
+      console.log("socketid  " + user.socketId + " contactuserid  " + contactUserId);
 
-    console.log(currentUserId);
-    let socketUserName = user.username;
-    io.to(user.socketId).emit("notify", { message, currentUserId, socketUserName });
-  }
-
-
-  // send notification with  firebase 
-  sendFirebaseMessage(message, reciverFBToken, reciverName);
+      console.log(currentUserId);
+      let socketUserName = user.username;
+      io.to(user.socketId).emit("notify", { message, currentUserId, socketUserName });
+    }
 
 
-
-  let chat = await chatModel.findOne({
-    participent: { $all: [currentUserId, contactUserId] }
-  }).populate('messages');
+    // send notification with  firebase 
+    sendFirebaseMessage(message, reciverFBToken, reciverName);
 
 
-  if (!chat) {
-    chat = await chatModel.create({
-      participent: [currentUserId, contactUserId]
+
+    let chat = await chatModel.findOne({
+      participent: { $all: [currentUserId, contactUserId] }
+    }).populate('messages');
+
+
+    if (!chat) {
+      chat = await chatModel.create({
+        participent: [currentUserId, contactUserId]
+      })
+    }
+
+    const newMessage = await messageModel.create({
+      sender: currentUserId,
+      recipient: contactUserId,
+      content: message,
+      image: selectedImage,
+      chatId: chat._id
     })
+
+    chat.messages.push(newMessage._id);
+    await chat.save();
+    //  console.log(" msg sended",newMessage);
+
   }
 
-  const newMessage = await messageModel.create({
-    sender: currentUserId,
-    recipient: contactUserId,
-    content: message,
-    image: selectedImage,
-    chatId: chat._id
+  )
+
+  socket.on('Typing-indicator', async (roomId, currentUserId) => {
+    io.to(roomId).emit('Typing', roomId, currentUserId)
+
+  });
+  socket.on('Stop-typing', async (roomId) => {
+    io.to(roomId).emit('typing-stop');
+
   })
 
-  chat.messages.push(newMessage._id);
-  await chat.save();
-  //  console.log(" msg sended",newMessage);
+  // call socket 
 
+  socket.on('join-call-room', (contactUserId, roomId, userPeerId, data) => {
+    socket.join(roomId);
+    // Notify other users in the room of a new participant to start the call
+    io.to(contactUserId).emit('incomming-call', data);
+    socket.to(roomId).emit('start-call', userPeerId);
+
+
+  });
+  socket.on("call-declined", (id) => {
+    io.to(id).emit("call-rejected");
+  })
+  socket.on("call-Ended", (room) => {
+    io.to(room).emit("send-call-ended");
+  })
+
+  socket.on('SendFreindRequest', async (data) => {
+    console.log(data);
+    console.log(data.reciver._id);
+  
+    const sender = data?.sender;
+    const reciver = data?.reciver;
+  
+    try {
+      // Check if the receiver is already in the "sent" list
+      const userDoc = await user.findOne({ email: sender.email })
+      .populate('friendRequest.sent')
+    .populate('friendRequest.received')
+      if (!userDoc) {
+        console.error(`User with email ${sender.email} not found`);
+        return;
+      }
+  
+      const alreadySent = userDoc.friendRequest.sent.some(
+        (req) => req.email === reciver.email
+      );
+  
+      if (alreadySent) {
+        console.log(`${reciver.email} is already in the sent list.`);
+      // io.to(data.sender._id).emit('FriendRequestAlreadySended', );
+
+        return; // Stop here if already added
+      }
+       else{
+
+    // Add the receiver to the "sent" list
+    const updatedUser = await user.findOneAndUpdate(
+      { email: sender.email },
+      { $push: { 'friendRequest.sent': reciver } },
+      { new: true, upsert: false }
+    ).populate('friendRequest.sent')
+    .populate('friendRequest.received')
+
+    const updateRecevierUser = await user.findOneAndUpdate(
+      { email: reciver.email },
+      { $push: { 'friendRequest.received': sender } },
+      { new: true, upsert: false }
+    ).populate('friendRequest.sent')
+    .populate('friendRequest.received')
+
+    
+    console.log(`${sender.email} added ${reciver.email} to the sent list.`);
+    
+    // Emit the friend request event
+    io.to(data.sender._id).emit('FriendRequestSended', updatedUser);
+    
+    io.to(data.reciver._id).emit('IncomingfriendRequest', sender,updateRecevierUser);
+  }
+    } catch (error) {
+      console.error('Error processing friend request:', error);
+    }
+  });
+
+  socket.on('freindRequestAccepted',async (sender,reciver)=>{
+    const updatedReciverUser = await user.findOneAndUpdate(
+      { email: reciver.email },
+      { $push: { 'contacts': sender } },
+      { new: true, upsert: false }
+    ).populate('contacts')
+
+    const updatedSenderUser = await user.findOneAndUpdate(
+      { email: sender.email },
+      { $push: { 'contacts': reciver } },
+      { new: true, upsert: false }
+    ).populate('contacts')
+
+  
+    console.log("updated user with new contact which is ",updatedReciverUser);
+    
+  io.to(reciver._id).emit('AcceptedFriendRequest',updatedReciverUser);
+  io.to(sender._id).emit('AcceptedFriendRequest',updatedSenderUser);
+
+  })
+  
 }
 
-)
 
-socket.on('Typing-indicator', async (roomId, currentUserId) => {
-  io.to(roomId).emit('Typing', roomId, currentUserId)
-
-});
-socket.on('Stop-typing', async (roomId) => {
-  io.to(roomId).emit('typing-stop');
-
-})
-
-// call socket 
-
-socket.on('join-call-room', (contactUserId, roomId, userPeerId, data) => {
-  socket.join(roomId);
-  // Notify other users in the room of a new participant to start the call
-  io.to(contactUserId).emit('incomming-call', data);
-  socket.to(roomId).emit('start-call', userPeerId);
-
-
-});
-socket.on("call-declined", (id) => {
-  io.to(id).emit("call-rejected");
-})
-socket.on("call-Ended", (room) => {
-  io.to(room).emit("send-call-ended");
-})
-}
 
 module.exports = { handleChatSockets };
