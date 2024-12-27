@@ -5,10 +5,12 @@ const cookieParser = require('cookie-parser');
 
 
 const { isLogin } = require('./middlewares/isLogin');
-const { userData, AllUserList } = require('./routes/userData');
+const { userData, AllUserList, updateUser } = require('./routes/userData');
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-const notificationRoute=require('./controllers/notificationController')
+const notificationRoute=require('./controllers/notificationController');
+const { gemmniChat } = require('./routes/gemmniChat');
+const upload = require('./config/multerConfig');
 const app = express();
 
 // middleware
@@ -29,7 +31,9 @@ try {
   });
   app.get('/userData', isLogin, userData);
   app.get('/get-all-users',AllUserList);
+  app.post('/updateUser',upload.single('profilePicture'),isLogin,updateUser);
   app.use('/Notification',isLogin,notificationRoute)
+  app.get('/gemmniChat',gemmniChat);
   console.log(
     "routes look perfect"
   );

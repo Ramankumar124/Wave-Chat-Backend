@@ -24,11 +24,15 @@ const handleChatSockets = (socket, io) => {
       }
 
     )
+   const  user= onlineUser.findIndex((user)=> user.OrignalSocketId==OrignalSocketId)
+   console.log(user);
+   
+   if(user==-1){
     onlineUser.push({
       OrignalSocketId,
       username: data.name,
       email: data.email
-    })
+    })}
     console.log(`${data.name}  with id ${data._id} joined server socket`);
     console.log("online users ", onlineUser);
 
@@ -41,7 +45,7 @@ const handleChatSockets = (socket, io) => {
     let newOnlineUser = onlineUser.filter((user) => user.OrignalSocketId !== socket.id);
 
     onlineUser = newOnlineUser;
-    console.log(onlineUser);
+    console.log("online users left after someone lefted",onlineUser);
 
     io.emit("Online-Users", onlineUser);
 
