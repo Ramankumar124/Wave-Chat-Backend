@@ -143,11 +143,11 @@ const handleChatSockets = (socket, io) => {
   
 
   socket.on('SendFreindRequest', async (data) => {
-    console.log(data);
-    console.log(data.reciver._id);
-  
+    console.log("data from sendFRiendReque",data);
+    
     const sender = data?.sender;
     const reciver = data?.reciver;
+    console.log(data.reciver._id);
   
     try {
       // Check if the receiver is already in the "sent" list

@@ -4,7 +4,7 @@ const { generateToken } = require('../utils/genrateToken');
 
 
 module.exports.registerUser = async function (req, res) {
-    const { email, password, phone, name } = req.body;
+    const { email, password} = req.body;
     try {
         const existingUser = await userModel.findOne({ email });
         if (existingUser) {
@@ -25,10 +25,9 @@ module.exports.registerUser = async function (req, res) {
                 // Create the user after password is hashed
                 try {
                     const newUser = await userModel.create({
-                        name,
                         email,
                         password: hash,
-                        phone,
+                    
                     });
                     let token = generateToken(newUser);
                     res.cookie("token", token);
@@ -94,6 +93,28 @@ module.exports.logoutUser= function (req, res) {
         res.status(500).json({ message: "internal server error", error })
     }
 
+}
+
+module.exports.createProfile=async function (req,res){
+
+    const {email,name,bio}=req.body;
+    console.log(req.body);
+    
+    
+    try {
+        const user=await userModel.findOne({email});
+        if(user){
+            user.name=name;
+            user.bio=bio;
+            const updatedUser=await user.save();
+            return res.status(200).json({message:"Profile updated successfully",user:updatedUser});
+        }
+        else{
+            return res.status(401).json({message:"User not found"});
+        }
+    } catch (error) {
+        console.log(error.message);
+    }
 }
 module.exports.googleLogin=async function (req,res){
     const {data}=req.body;
