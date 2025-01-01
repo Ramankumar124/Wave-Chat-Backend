@@ -133,6 +133,15 @@ const handleChatSockets = (socket, io) => {
     io.to(room).emit("send-call-ended");
   })
 
+  socket.on("join-voice-room", (contactUserId, roomId, peerId) => {
+    socket.to(contactUserId).emit("start-voice-call", peerId);
+  });
+  
+  socket.on("end-voice-call", () => {
+    socket.broadcast.emit("voice-call-ended");
+  });
+  
+
   socket.on('SendFreindRequest', async (data) => {
     console.log(data);
     console.log(data.reciver._id);
@@ -169,6 +178,7 @@ const handleChatSockets = (socket, io) => {
       { new: true, upsert: false }
     ).populate('friendRequest.sent')
     .populate('friendRequest.received')
+    .populate('contacts')
 
     const updateRecevierUser = await user.findOneAndUpdate(
       { email: reciver.email },
@@ -210,6 +220,42 @@ const handleChatSockets = (socket, io) => {
   io.to(sender._id).emit('AcceptedFriendRequest',updatedSenderUser);
 
   })
+  socket.on('friendRequestDeclined', async (sender, reciver) => {
+    const removeFriendRequest = async (reciver, sender) => {
+      try {
+        // Fetch the receiver's user document
+        const receiverUser = await user.findOne({ email: reciver.email })
+    .populate('friendRequest.received')
+    ;
+        if (!receiverUser) throw new Error(`Receiver ${reciver} not found`);
+  
+        // Remove sender from receiver's received friend requests
+        receiverUser.friendRequest.received = receiverUser.friendRequest.received.filter(
+          (request) => request.email !== sender.email
+        );
+        await receiverUser.save();
+  
+        // Fetch the sender's user document
+        const senderUser = await user.findOne({ email: sender.email })
+    .populate('friendRequest.sent')
+    ;
+        if (!senderUser) throw new Error(`Sender ${sender.email} not found`);
+  
+        // Remove receiver from sender's sent friend requests
+        senderUser.friendRequest.sent = senderUser.friendRequest.sent.filter(
+          (request) => request.email !== reciver.email
+        );
+        await senderUser.save();
+  
+        console.log("Friend requests updated successfully");
+      } catch (error) {
+        console.error("Error removing friend requests:", error.message);
+      }
+    };
+  
+    // Call the function
+    await removeFriendRequest(reciver, sender);
+  });
   
 }
 
