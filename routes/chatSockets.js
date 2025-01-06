@@ -15,7 +15,8 @@ const handleChatSockets = (socket, io) => {
   socket.on("setup", ({ data, OrignalSocketId }) => {
     socket.join(data._id);
     console.log(OrignalSocketId);
-
+ const newUser =connection.findIndex((user)=> user.socketId==data._id)
+ if(newUser==-1){
     connection.push(
 
       {
@@ -24,6 +25,7 @@ const handleChatSockets = (socket, io) => {
       }
 
     )
+  }
    const  user= onlineUser.findIndex((user)=> user.OrignalSocketId==OrignalSocketId)
    console.log(user);
    
@@ -63,15 +65,17 @@ const handleChatSockets = (socket, io) => {
 
     io.to(roomId).emit('receiveMessage', { roomId, message, selectedImage, currentUserId, contactUserId })
     io.to(contactUserId).emit("soundpopup");
-    let user = connection.find((user) => user.socketId == contactUserId)
-    if (user) {
-      console.log("user socket id", user.socketId);
-      console.log(connection);
-      console.log("socketid  " + user.socketId + " contactuserid  " + contactUserId);
-
-      console.log(currentUserId);
-      let socketUserName = user.username;
-      io.to(user.socketId).emit("notify", { message, currentUserId, socketUserName });
+    let reciver = connection.find((user) => user.socketId == contactUserId);
+    let sender=connection.find((user)=>user.socketId==currentUserId);
+    if (reciver) {
+      // console.log("user socket id", reciver.socketId);
+      // console.log(connection);
+      // console.log("socketid  " + user.socketId + " contactuserid  " + contactUserId)
+      // console.log(currentUserId);
+      // let socketUserName = user.username;
+      io.to(reciver.socketId).emit("notify", { message, currentUserId, senderName: sender.username });
+      console.log("send notificaiton to ", reciver.socketId);
+      
     }
 
 
@@ -133,21 +137,25 @@ const handleChatSockets = (socket, io) => {
     io.to(room).emit("send-call-ended");
   })
 
-  socket.on("join-voice-room", (contactUserId, roomId, peerId) => {
-    socket.to(contactUserId).emit("start-voice-call", peerId);
-  });
-  
-  socket.on("end-voice-call", () => {
-    socket.broadcast.emit("voice-call-ended");
-  });
-  
+  socket.on('SendFreindRequest', async (senderEmail,reciverEmail) => {
+    // console.log(data);
+    // console.log(data.reciver._id);
 
-  socket.on('SendFreindRequest', async (data) => {
-    console.log("data from sendFRiendReque",data);
+    console.log("sender email",senderEmail
+    );
+    console.log("reciver email",reciverEmail);
     
-    const sender = data?.sender;
-    const reciver = data?.reciver;
-    console.log(data.reciver._id);
+    
+  
+    const sender = await user.findOne({ email: senderEmail })
+    .populate('friendRequest.sent')
+    .populate('friendRequest.received')
+    .populate('contacts');
+    
+    const reciver = await user.findOne({ email: reciverEmail })
+    .populate('friendRequest.sent')
+    .populate('friendRequest.received')
+    .populate('contacts');
   
     try {
       // Check if the receiver is already in the "sent" list
@@ -173,34 +181,69 @@ const handleChatSockets = (socket, io) => {
 
     // Add the receiver to the "sent" list
     const updatedUser = await user.findOneAndUpdate(
-      { email: sender.email },
+      { email: senderEmail },
       { $push: { 'friendRequest.sent': reciver } },
       { new: true, upsert: false }
     ).populate('friendRequest.sent')
     .populate('friendRequest.received')
-    .populate('contacts')
+    .populate('contacts');
 
     const updateRecevierUser = await user.findOneAndUpdate(
-      { email: reciver.email },
+      { email: reciverEmail },
       { $push: { 'friendRequest.received': sender } },
       { new: true, upsert: false }
     ).populate('friendRequest.sent')
     .populate('friendRequest.received')
+    .populate('contacts');
+
+    const senderChanges=updatedUser.friendRequest.sent;
+    const reciverChanges=updateRecevierUser.friendRequest.received;
 
     
     console.log(`${sender.email} added ${reciver.email} to the sent list.`);
     
     // Emit the friend request event
-    io.to(data.sender._id).emit('FriendRequestSended', updatedUser);
     
-    io.to(data.reciver._id).emit('IncomingfriendRequest', sender,updateRecevierUser);
+   try {
+   io.to(sender._id.toString()).emit('FriendRequestSended', senderChanges);
+    console.log(sender);
+    
+   } catch (error) {
+    console.log(error);
+    
+   }
+    console.log("friend request sended to ",sender._id);
+    
+    io.to(reciver._id.toString()).emit('IncomingfriendRequest', {
+      sender: {
+        name: sender.name,
+        profilePicture: sender.profilePicture,
+        email: sender.email,
+      },
+      reciver: {
+        name: reciver.name,
+        profilePicture: reciver.profilePicture,
+        email: reciver.email,
+      },
+    });
   }
     } catch (error) {
       console.error('Error processing friend request:', error);
     }
   });
 
-  socket.on('freindRequestAccepted',async (sender,reciver)=>{
+  socket.on('freindRequestAccepted',async (senderEmail,reciverEmail)=>{
+
+    const sender = await user.findOne({ email: senderEmail })
+    .populate('friendRequest.sent')
+    .populate('friendRequest.received')
+    .populate('contacts');
+    
+    const reciver = await user.findOne({ email: reciverEmail })
+    .populate('friendRequest.sent')
+    .populate('friendRequest.received')
+    .populate('contacts');
+
     const updatedReciverUser = await user.findOneAndUpdate(
       { email: reciver.email },
       { $push: { 'contacts': sender } },
@@ -215,35 +258,39 @@ const handleChatSockets = (socket, io) => {
 
   
     console.log("updated user with new contact which is ",updatedReciverUser);
+    const reciverChanges=updatedReciverUser.contacts;
+    const senderChanges=updatedSenderUser.contacts;
     
-  io.to(reciver._id).emit('AcceptedFriendRequest',updatedReciverUser);
-  io.to(sender._id).emit('AcceptedFriendRequest',updatedSenderUser);
+  io.to(reciver._id.toString()).emit('AcceptedFriendRequest',reciverChanges);
+  io.to(sender._id.toString()).emit('AcceptedFriendRequest',senderChanges);
+
 
   })
-  socket.on('friendRequestDeclined', async (sender, reciver) => {
-    const removeFriendRequest = async (reciver, sender) => {
+
+  socket.on('friendRequestDeclined', async (senderEmail, reciverEmail) => {
+    const removeFriendRequest = async (reciverEmail, senderEmail) => {
       try {
         // Fetch the receiver's user document
-        const receiverUser = await user.findOne({ email: reciver.email })
+        const receiverUser = await user.findOne({ email: reciverEmail })
     .populate('friendRequest.received')
     ;
-        if (!receiverUser) throw new Error(`Receiver ${reciver} not found`);
+        if (!receiverUser) throw new Error(`Receiver ${reciverEmail} not found`);
   
         // Remove sender from receiver's received friend requests
         receiverUser.friendRequest.received = receiverUser.friendRequest.received.filter(
-          (request) => request.email !== sender.email
+          (request) => request.email !== senderEmail
         );
         await receiverUser.save();
   
         // Fetch the sender's user document
-        const senderUser = await user.findOne({ email: sender.email })
+        const senderUser = await user.findOne({ email: senderEmail })
     .populate('friendRequest.sent')
     ;
-        if (!senderUser) throw new Error(`Sender ${sender.email} not found`);
+        if (!senderUser) throw new Error(`Sender ${senderEmail} not found`);
   
         // Remove receiver from sender's sent friend requests
         senderUser.friendRequest.sent = senderUser.friendRequest.sent.filter(
-          (request) => request.email !== reciver.email
+          (request) => request.email !== reciverEmail
         );
         await senderUser.save();
   
@@ -254,10 +301,11 @@ const handleChatSockets = (socket, io) => {
     };
   
     // Call the function
-    await removeFriendRequest(reciver, sender);
+    await removeFriendRequest(reciverEmail, senderEmail);
   });
   
 }
+
 
 
 

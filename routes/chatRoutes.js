@@ -11,7 +11,7 @@ router.get('/:selectedChatId', isLogin, async (req, res) => {
     const selectedChatId = req.params.selectedChatId;
 
     const page = parseInt(req.query.page) || 1;
-    const limit = 10;  // Limit the number of messages per page
+    const limit = 100;  // Limit the number of messages per page
     
     // Step 1: Count messages specific to the chat between two users
     const chat = await chatModel.findOne({
