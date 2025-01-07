@@ -18,7 +18,7 @@ const server = http.createServer(app);
 // Setup Socket.io
 const io = new Server(server, {
     cors: {
-        origin: 'https://wave-chat-rho.vercel.app/',  // Your React app
+        origin: 'https://wave-chat-rho.vercel.app',  // Your React app
         methods: ['GET', 'POST'],
     },
 });
