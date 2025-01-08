@@ -15,7 +15,7 @@ mongoose.connect(process.env.MONGO_URL).then(() => {
 // Create HTTP Server
 const server = http.createServer(app);
 
-const ALLOWED_ORIGINS = ['https://wave-chat-rho.vercel.app', 'http://localhost:3000'];
+const ALLOWED_ORIGINS = ['https://wave-chat-rho.vercel.app', 'http://localhost:5173'];
 // Setup Socket.io
 const io = new Server(server, {
     cors: {
