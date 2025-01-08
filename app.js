@@ -18,7 +18,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: 'https://wave-chat-rho.vercel.app',
+    origin: '*',
     credentials: true,
   })
 );
