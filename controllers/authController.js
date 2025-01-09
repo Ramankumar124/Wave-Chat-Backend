@@ -55,8 +55,8 @@ module.exports.loginUser = async function (req, res) {
                     let token = generateToken(user);
 
        
-                    res.cookie("token", token);
-                    res.status(200).json({ message: 'User Found', User: user });
+                    // res.cookie("token", token);
+                    res.status(200).json({ message: 'User Found', User: user,token:token });
                
                 }
                 else {

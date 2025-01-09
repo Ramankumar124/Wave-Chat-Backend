@@ -19,7 +19,7 @@ const ALLOWED_ORIGINS = ['https://wave-chat-rho.vercel.app', 'http://localhost:5
 // Setup Socket.io
 const io = new Server(server, {
     cors: {
-        origin:ALLOWED_ORIGINS ,  
+        origin:ALLOWED_ORIGINS,  
         methods: ['GET', 'POST'],
     },
 });
