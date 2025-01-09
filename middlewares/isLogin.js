@@ -5,6 +5,9 @@ const userModel = require("../models/user");
 module.exports.isLogin = async function (req, res, next) {
     try {
         // Check if token is present in cookies
+
+        console.log(req.cookies);
+        
         const token = req.cookies.token;
         if (!token) {
             return res.status(401).json({ message: 'Authentication token is missing' });
