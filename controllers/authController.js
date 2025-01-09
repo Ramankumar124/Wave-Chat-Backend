@@ -30,9 +30,9 @@ module.exports.registerUser = async function (req, res) {
                     
                     });
                     let token = generateToken(newUser);
-                    res.cookie("token", token);
+                    // res.cookie("token", token);
                     // Respond after user creation
-                    return res.status(201).json({ message: 'User registered successfully', user: newUser });
+                    return res.status(201).json({ message: 'User registered successfully', user: newUser,tokena:token });
                 } catch (error) {
                     return res.status(500).json({ message: 'Error creating user', error: error.message });
                 }
@@ -83,8 +83,9 @@ module.exports.logoutUser= function (req, res) {
 
     try {
         if (req.cookies?.token) {
-            res.cookie("token", "");
-            res.status(200).json({ message: 'user signedout' })
+            // res.cookie("token", "");
+
+            res.status(200).json({ message: 'user signedout' ,token:token})
         }
         else{
             res.status(500).json({ message: "Cokkie not found" })
@@ -136,8 +137,9 @@ module.exports.googleLogin=async function (req,res){
         else{
             // console.log(" user",user);
             let token = generateToken(user);
-            res.cookie("token", token);
-         return   res.status(200).json({ message: 'Loggedin with google', User: user });
+            // res.cookie("token", token);
+
+         return   res.status(200).json({ message: 'Loggedin with google', User: user,token:token });
 
         }
         
