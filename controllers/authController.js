@@ -32,7 +32,7 @@ module.exports.registerUser = async function (req, res) {
                     let token = generateToken(newUser);
                     // res.cookie("token", token);
                     // Respond after user creation
-                    return res.status(201).json({ message: 'User registered successfully', user: newUser,tokena:token });
+                    return res.status(201).json({ message: 'User registered successfully', user: newUser,token:token });
                 } catch (error) {
                     return res.status(500).json({ message: 'Error creating user', error: error.message });
                 }
