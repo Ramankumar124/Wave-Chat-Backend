@@ -36,7 +36,7 @@ module.exports.registerUser = async function (req, res) {
                     res.cookie('token', token, {
                         httpOnly: true,       // Prevent JavaScript access
                         secure: true,         // Use true for HTTPS
-                        sameSite: 'None',     // Allow cross-origin
+                        sameSite: 'none',     // Allow cross-origin
                         path: '/',            // Accessible from all routes
                     }).status(201).json({ message: 'User registered successfully', user: newUser });
                     

@@ -9,7 +9,7 @@ module.exports.isLogin = async function (req, res, next) {
         console.log(req.cookies);
         
         const token = req.cookies.token;
-        if (!token) {
+        if (!token) {   
             return res.status(401).json({ message: 'Authentication token is missing' });
         }
 
