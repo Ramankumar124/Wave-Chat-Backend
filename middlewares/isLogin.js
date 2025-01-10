@@ -6,7 +6,7 @@ module.exports.isLogin = async function (req, res, next) {
     try {
         // Check if token is present in cookies
 
-        // console.log(req);
+        console.log("cookie",req.cookies);
         
         const token = req.cookies.token;
         if (!token) {   

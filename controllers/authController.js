@@ -68,8 +68,9 @@ module.exports.loginUser = async function (req, res) {
                     // res.cookie("token", token);
                     res.cookie('token', token, {
                         httpOnly: true,       // Prevent JavaScript access
-                        secure: true,         // Use true for HTTPS
+                        secure: false,         // Use true for HTTPS
                         sameSite: 'none',     // Allow cross-origin
+                        path:'/'
                           // Accessible from all routes
                     }).status(201).json({ message: 'User found successfully', User: user });
                     
