@@ -63,13 +63,14 @@ module.exports.loginUser = async function (req, res) {
                 if (result) {
                     console.log(result);
                     let token = generateToken(user);
-
+                       console.log("token",token);
+                       
        
                     // res.cookie("token", token);
                     res.cookie('token', token, {
                         httpOnly: true,       // Prevent JavaScript access
-                        secure: false,         // Use true for HTTPS
-                        sameSite: 'none',     // Allow cross-origin
+                        secure: true,         // Use true for HTTPS
+                        sameSite: 'None',     // Allow cross-originj
                         path:'/'
                           // Accessible from all routes
                     }).status(201).json({ message: 'User found successfully', User: user });
