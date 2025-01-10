@@ -5,6 +5,7 @@ const { generateToken } = require('../utils/genrateToken');
 
 module.exports.registerUser = async function (req, res) {
     const { email, password} = req.body;
+    console.log("hwllllllllllo");
     try {
         const existingUser = await userModel.findOne({ email });
         if (existingUser) {
@@ -32,12 +33,13 @@ module.exports.registerUser = async function (req, res) {
                     let token = generateToken(newUser);
                     // res.cookie("token", token);
                     // Respond after user creation
-
+                    
+                   console.log("token",token);  
                     res.cookie('token', token, {
                         httpOnly: true,       // Prevent JavaScript access
                         secure: true,         // Use true for HTTPS
                         sameSite: 'none',     // Allow cross-origin
-                        path: '/',            // Accessible from all routes
+                          // Accessible from all routes
                     }).status(201).json({ message: 'User registered successfully', user: newUser });
                     
                     // return res.status(201).json({ message: 'User registered successfully', user: newUser,token:token });
@@ -64,7 +66,14 @@ module.exports.loginUser = async function (req, res) {
 
        
                     // res.cookie("token", token);
-                    res.status(200).json({ message: 'User Found', User: user,token:token });
+                    res.cookie('token', token, {
+                        httpOnly: true,       // Prevent JavaScript access
+                        secure: true,         // Use true for HTTPS
+                        sameSite: 'none',     // Allow cross-origin
+                          // Accessible from all routes
+                    }).status(201).json({ message: 'User found successfully', User: user });
+                    
+                    // res.status(200).json({ message: 'User Found', User: user,token:token });
                
                 }
                 else {
