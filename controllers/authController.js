@@ -68,7 +68,7 @@ module.exports.loginUser = async function (req, res) {
        
                     // res.cookie("token", token);
                     res.cookie('token', token, {
-                        httpOnly: true,       // Prevent JavaScript access
+                        httpOnly: false,       // Prevent JavaScript access
                         secure: true,         // Use true for HTTPS
                         sameSite: 'None',     // Allow cross-originj
                         path:'/'
