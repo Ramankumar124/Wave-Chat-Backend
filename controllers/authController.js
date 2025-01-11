@@ -5,7 +5,6 @@ const { generateToken } = require('../utils/genrateToken');
 
 module.exports.registerUser = async function (req, res) {
     const { email, password} = req.body;
-    console.log("hwllllllllllo");
     try {
         const existingUser = await userModel.findOne({ email });
         if (existingUser) {
@@ -30,11 +29,7 @@ module.exports.registerUser = async function (req, res) {
                         password: hash,
                     
                     });
-                    let token = generateToken(newUser);
-                    // res.cookie("token", token);
-                    // Respond after user creation
-                    
-                   console.log("token",token);  
+                    let token = generateToken(newUser); 
                     res.cookie('token', token, {
                         httpOnly: true,       // Prevent JavaScript access
                         secure: true,         // Use true for HTTPS
@@ -64,23 +59,19 @@ module.exports.loginUser = async function (req, res) {
                     console.log(result);
                     let token = generateToken(user);
                        console.log("token",token);
-                       
-       
                     // res.cookie("token", token);
                     res.cookie('token', token, {
-                        httpOnly: false,       // Prevent JavaScript access
+                        httpOnly: true,       // Prevent JavaScript access
                         secure: true,         // Use true for HTTPS
                         sameSite: 'None',     // Allow cross-originj
                         path:'/'
                           // Accessible from all routes
-                    }).status(201).json({ message: 'User found successfully', User: user });
+                    }).status(201).json({ message: 'User found successfully', User: user,token:token });
                     
                     // res.status(200).json({ message: 'User Found', User: user,token:token });
                
                 }
                 else {
-                    console.log(result);
-
                     res.status(401).json({ message: 'wrong crenditals' });
 
                 }
@@ -102,9 +93,8 @@ module.exports.logoutUser= function (req, res) {
 
     try {
         if (req.cookies?.token) {
-            // res.cookie("token", "");
-
-            res.status(200).json({ message: 'user signedout' ,token:token})
+            res.cookie("token", "");
+            res.status(200).json({ message: 'user signedout' })
         }
         else{
             res.status(500).json({ message: "Cokkie not found" })
