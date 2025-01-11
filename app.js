@@ -17,7 +17,7 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-const ALLOWED_ORIGINS = ['https://wave-chat-rho.vercel.app', 'http://localhost:5173'];
+const ALLOWED_ORIGINS = [process.env.CLIENT_URL, 'http://localhost:5173'];
 
 app.use(
   cors({
