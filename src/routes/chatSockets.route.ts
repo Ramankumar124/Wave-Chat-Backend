@@ -22,11 +22,9 @@ interface OnlineUser {
 }
 
 interface MessageData {
-  roomId: string;
   message: string;
-  selectedImage?: string;
-  currentUserId: string;
-  contactUserId: string;
+  senderId: string;
+  receiverId: string;
   reciverFBToken?: string;
   reciverName?: string;
 }
@@ -38,7 +36,7 @@ const handleChatSockets = (socket: Socket, io: Server) => {
 
   socket.on("setup", ({ data, OrignalSocketId }: { data: UserData; OrignalSocketId: string }) => {
     socket.join(data._id);
-    console.log(OrignalSocketId);
+    // yo mainatain all connected users;
     const newUser = connection.findIndex((user) => user.socketId == data._id);
     if (newUser == -1) {
       connection.push({
@@ -46,9 +44,8 @@ const handleChatSockets = (socket: Socket, io: Server) => {
         username: data.name
       });
     }
-    const user = onlineUser.findIndex((user) => user.OrignalSocketId == OrignalSocketId);
-    console.log(user);
-
+    // to send status of online user
+    const user = onlineUser.findIndex((user) => user.OrignalSocketId == OrignalSocketId)
     if (user == -1) {
       onlineUser.push({
         OrignalSocketId,
@@ -70,53 +67,56 @@ const handleChatSockets = (socket: Socket, io: Server) => {
     io.emit("Online-Users", onlineUser);
   });
 
-  socket.on('join-room', ({ roomId, userId }: { roomId: string; userId: string }) => {
-    socket.join(roomId);
-    console.log(`${userId} joined room: ${roomId}`);
+  socket.on('join-room', ({ senderId,receiverId }: { senderId: string;receiverId: string }) => {
+    const room=[senderId,receiverId].sort().join("_");
+    socket.join(room);
+    console.log(`${senderId} joined room: ${room}`);
   });
 
   socket.on('sendMessage', async (data: MessageData) => {
-    const { roomId, message, selectedImage, currentUserId, contactUserId, reciverFBToken, reciverName } = data;
-    console.log(roomId, message, selectedImage, currentUserId, contactUserId);
+    const { message, senderId, receiverId, reciverFBToken, reciverName } = data;
+    const room=[senderId,receiverId].sort().join("_");
+console.log("senderID",senderId);
+console.log("ReciverID",receiverId);
 
-    io.to(roomId).emit('receiveMessage', { roomId, message, selectedImage, currentUserId, contactUserId });
-    io.to(contactUserId).emit("soundpopup");
-    let reciver = connection.find((user) => user.socketId == contactUserId);
-    let sender = connection.find((user) => user.socketId == currentUserId);
+
+    io.to(room).emit('receiveMessage', { message,senderId,receiverId });
+    io.to(receiverId).emit("soundpopup");
+    let reciver = connection.find((user) => user.socketId == receiverId);
+    let sender = connection.find((user) => user.socketId ==senderId);
     if (reciver) {
-      io.to(reciver.socketId).emit("notify", { message, currentUserId, senderName: sender?.username });
+      io.to(reciver.socketId).emit("notify", { message,senderId,senderName: sender?.username });
       console.log("send notification to ", reciver.socketId);
     }
 
-    // send notification with firebase 
-    if (reciverFBToken && reciverName) {
-      sendFirebaseMessage(message, reciverFBToken, reciverName);
-    }
+    // // send notification with firebase 
+    // if (reciverFBToken && reciverName) {
+    //   sendFirebaseMessage(message, reciverFBToken, reciverName);
+    // }
 
     let chat = await Chat.findOne({
-      participent: { $all: [currentUserId, contactUserId] }
+      participent: { $all: [senderId,receiverId] }
     }).populate('messages');
 
     if (!chat) {
       chat = await Chat.create({
-        participent: [currentUserId, contactUserId]
+        participent: [senderId,receiverId]
       });
     }
 
     const newMessage:any = await Message.create({
-      sender: currentUserId,
-      recipient: contactUserId,
+      sender: senderId,
+      recipient: receiverId,
       content: message,
-      image: selectedImage,
+      // image: selectedImage,
       chatId: chat._id
     });
-
     chat.messages.push(newMessage._id);
     await chat.save();
   });
 
-  socket.on('Typing-indicator', async (roomId: string, currentUserId: string) => {
-    io.to(roomId).emit('Typing', roomId, currentUserId);
+  socket.on('Typing-indicator', async (roomId: string, senderId: string) => {
+    io.to(roomId).emit('Typing', roomId, senderId);
   });
 
   socket.on('Stop-typing', async (roomId: string) => {
@@ -124,9 +124,9 @@ const handleChatSockets = (socket: Socket, io: Server) => {
   });
 
   // call socket 
-  socket.on('join-call-room', (contactUserId: string, roomId: string, userPeerId: string, data: any) => {
+  socket.on('join-call-room', (receiverId: string, roomId: string, userPeerId: string, data: any) => {
     socket.join(roomId);
-    io.to(contactUserId).emit('incomming-call', data);
+    io.to(receiverId).emit('incomming-call', data);
     socket.to(roomId).emit('start-call', userPeerId);
   });
 

@@ -9,8 +9,28 @@ import {authRoutes} from "./routes/auth.route";
 import {ChatRoutes} from "./routes/chat.route";
 import {notificationRoute} from "./routes/FireBaseNotificaton.route";
 import gemmniChat from "./routes/gemmniChat.route";
-const app: Express = express();
+import logger from "./utils/logger";
+import morgan from "morgan";
+import { errorHandler } from "./middlewares/ErrorHandler.middleware";
+const app: Express = express(); 
 
+const morganFormat = ":method :url :status :response-time ms";
+
+app.use(
+  morgan(morganFormat, {
+    stream: {
+      write: (message:any) => {
+        const logObject = {
+          method: message.split(" ")[0],
+          url: message.split(" ")[1],
+          status: message.split(" ")[2],
+          responseTime: message.split(" ")[3],
+        };
+        logger.info(JSON.stringify(logObject));
+      },
+    },
+  })
+);
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -25,7 +45,7 @@ const ALLOWED_ORIGINS: string[] = [
 
 app.use(
   cors({
-    origin: ALLOWED_ORIGINS,
+    origin:"http://localhost:5173",
     credentials: true,
   })
 );
@@ -36,6 +56,7 @@ try {
   app.use("/api/v1/chat", ChatRoutes);
   app.use("/api/v1/Notification", notificationRoute);
   app.get("/gemmniChat", gemmniChat);
+  app.use(errorHandler);
 } catch (error) {
   console.log(error);
 }

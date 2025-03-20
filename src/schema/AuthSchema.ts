@@ -37,8 +37,9 @@ export const forgotPasswordSchema = z.object({
   });
 
   export const verifyForgotPasswordSchema = z.object({
-    password: z
-      .string({ required_error: "password is required" })
-      .min(8, { message: "password must be 8 charector" }),
     otp: z.string().min(4, "otp minimum 4 digit"),
   });
+  export const changePasswordSchema=z.object({
+    password:z.string({required_error:"Password is required.."})
+    .min(6,{message:"Password must be atleast 6 characters long"}),
+  })

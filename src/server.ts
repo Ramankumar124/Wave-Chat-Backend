@@ -23,6 +23,7 @@ const io = new Server(server, {
 
 try {
   io.on("connection", (socket) => {
+    
     handleChatSockets(socket, io);
   });
   console.log("socket working perfectly");

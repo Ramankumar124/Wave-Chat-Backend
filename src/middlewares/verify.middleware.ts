@@ -6,8 +6,10 @@ import User from "../models/user.model";
 
 export async function jwtVerify (req:Request, res:Response, next:NextFunction) {
     try {
-
-        const token = req?.cookies?.accessToken;
+   
+        const token =await req?.cookies?.accessToken;
+        console.log(req.cookies);
+        
         if (!token) {   
             return next(new ApiError(401,"Authentication token is missing"))
         }

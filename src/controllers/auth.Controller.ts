@@ -3,6 +3,7 @@ import User from "../models/user.model";
 import bcrypt from "bcrypt";
 import { generateToken } from "../utils/genrateToken";
 import {
+  changePasswordSchema,
   forgotPasswordSchema,
   registerSchema,
   resendEmailSchema,
@@ -17,6 +18,7 @@ import { generateOtp } from "../utils/genrateOtp";
 import { sendEmail, SendEmailVerification } from "../mails/sendMails";
 import jwt from "jsonwebtoken";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudnary";
+import logger from "../utils/logger";
 
 interface UserDataRequest extends Request {
   user?:{email:string};
@@ -39,11 +41,13 @@ const genrerateAccessAndRefreshToken = async (userId: string) => {
     throw new ApiError(500, "Something went wrong while gernrating tokens");
   }
 };
+
 const registerUser = asyncHandler(async function (
   req: Request,
   res: Response,
   next: NextFunction
 ) {
+  console.log(req.body);
   const { email, password, name, bio } = registerSchema.parse(req.body);
 
   const existingUser = await User.findOne({ email });
@@ -56,7 +60,6 @@ const registerUser = asyncHandler(async function (
     public_id:"",
   }
 //@ts-ignore
-
 if(req?.files?.avatar?.length>0){
 const files=req.files as{
   [key: string]: Express.Multer.File[];
@@ -107,13 +110,60 @@ if(!uploadAvatar){
     maxAge: 1000 * 60 * 60,
     
   };
-
   res
     .status(200)
     .cookie("verifyUser", token, options)
     .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
 
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+  if (!incomingRefreshToken) {
+      throw new ApiError(401, "unauthorized request")
+  }
+
+  try {
+      const decodedToken:any = jwt.verify(
+          incomingRefreshToken,
+          process.env.REFRESH_TOKEN_SECRET as string
+      )
+  
+      const user = await User.findById(decodedToken?._id)
+  
+      if (!user) {
+          throw new ApiError(401, "Invalid refresh token")
+      }
+  
+      if (incomingRefreshToken !== user?.refreshToken) {
+          throw new ApiError(401, "Refresh token is expired or used")
+          
+      }
+  
+      const options = {
+          httpOnly: true,
+          secure: true,
+          
+      }
+  //@ts-ignore
+      const {accessToken, newRefreshToken} = await genrerateAccessAndRefreshToken(user._id)
+  
+      return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
+      .json(
+          new ApiResponse(
+              200, 
+              {accessToken, refreshToken: newRefreshToken},
+              "Access token refreshed"
+          )
+      )
+  } catch (error:any) {
+      throw new ApiError(401, error?.message || "Invalid refresh token")
+  }
+
+})
 const verifyEmail = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { otp } = verifyOtp.parse(req.body);
@@ -209,7 +259,20 @@ const loginUser = asyncHandler(async function (req: Request,res: Response,next: 
 
   const logedInUser = await User.findById(user._id).select(
     "-password -refreshToken -otp"
-  );
+  ).populate([
+    {
+      path: 'contacts',
+      select: '-password  -contacts -refreshToken -otp'
+    },
+    {
+      path: 'friendRequest.sent', // Path to populate friendRequest.sent
+      select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp' // Fields to exclude or include
+    },
+    {
+      path: 'friendRequest.received', // If you want to populate received friend requests as well
+      select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp'
+    }
+  ]);
   if (!logedInUser) {
     return next(new ApiError(400, "Something went wrong while signing user"));
   }
@@ -255,31 +318,11 @@ const logoutUser = asyncHandler(
   }
 );
 
-// module.exports.createProfile = async function (req, res) {
-//   const { email, name, bio } = req.body;
-//   console.log(req.body);
 
-//   try {
-//     const user = await userModel.findOne({ email });
-//     if (user) {
-//       user.name = name;
-//       user.bio = bio;
-//       const updatedUser = await user.save();
-//       return res
-//         .status(200)
-//         .json({ message: "Profile updated successfully", user: updatedUser });
-//     } else {
-//       return res.status(401).json({ message: "User not found" });
-//     }
-//   } catch (error) {
-//     console.log(error.message);
-//   }
-// };
 
 const forgotPassword = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { email } = forgotPasswordSchema.parse(req.body);
-
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -309,15 +352,15 @@ const forgotPassword = asyncHandler(
   }
 );
 
-const verifyForgotPassword = asyncHandler(
+const verifyForgotPasswordOtp = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { otp, password } = verifyForgotPasswordSchema.parse(req.body);
-
+    const { otp } = verifyForgotPasswordSchema.parse(req.body);
+console.log(typeof otp,otp);
+logger.debug(typeof otp,otp)
     const token = req.cookies?.verifyUser;
     if (!token) {
       return next(new ApiError(401, "invalid token"));
     }
-
     const decodedToken = await jwt.verify(
       token,
       process.env.OTP_SECRET as string
@@ -337,11 +380,18 @@ const verifyForgotPassword = asyncHandler(
       return next(new ApiError(400, "invalid otp"));
     }
 
-    user.password = password;
     user.otp = undefined;
 
     await user.save({ validateBeforeSave: false });
-
+    //@ts-ignore
+    const changPasswordToken=await jwt.sign({
+      id: user.id
+    },
+    process.env.OTP_SECRET as string,
+      {
+        expiresIn: process.env.OTP_EXPAIRY ,
+      }
+    )
     const options = {
       httpOnly: true,
       sameSite: "none" as const,
@@ -350,11 +400,47 @@ const verifyForgotPassword = asyncHandler(
     };
     return res
       .status(201)
+      .cookie("changePassword",changPasswordToken,options)
       .clearCookie("verifyUser", options)
       .json(new ApiResponse(201, user, "Email verified successfully"));
   }
 );
 
+const resetPassword=asyncHandler(
+  async(req:Request,res:Response,next:NextFunction)=>{
+    const {password}=changePasswordSchema.parse(req.body);
+    const token=req.cookies?.changePassword;
+    if(!token){
+      return next(new ApiError(401, "invalid token"));
+    }
+    const decodedToken = await jwt.verify(
+      token,
+      process.env.OTP_SECRET as string
+    );
+//@ts-ignore
+    const user = await User.findById(decodedToken.id).select(
+      "-password -refreshToken"
+    );
+
+    if (!user) {
+      return next(new ApiError(400, "Unable to changee password"));
+    }
+
+    user.password=password;
+    await user.save({ validateBeforeSave: false });
+    const options = {
+      httpOnly: true,
+      sameSite: "none" as const,
+      secure: true,
+      maxAge: 1000 * 60 * 60,
+    };
+    return res
+      .status(201)
+      .clearCookie("changePassword", options)
+      .json(new ApiResponse(201, {}, "Password changed successfully"));
+  }
+
+)
 const updateAvatar=asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     //@ts-ignore
@@ -438,22 +524,20 @@ const updateAvatar=asyncHandler(
 )
 const userData =asyncHandler (async (req:UserDataRequest, res:Response,next:NextFunction) => {
 
-
-  
   const user = await User.findOne({ email: (req.user as  {email:string}).email  })
-    .select('-password') // Exclude the password field
+    .select('-password -refreshToken -otp') // Exclude the password field
     .populate([
       {
         path: 'contacts',
-        select: '-password  -contacts'
+        select: '-password  -contacts -refreshToken -otp'
       },
       {
         path: 'friendRequest.sent', // Path to populate friendRequest.sent
-        select: '-password -firebaseToken -contacts -friendRequest' // Fields to exclude or include
+        select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp' // Fields to exclude or include
       },
       {
         path: 'friendRequest.received', // If you want to populate received friend requests as well
-        select: '-password -firebaseToken -contacts -friendRequest'
+        select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp'
       }
     ]);
 
@@ -461,14 +545,11 @@ const userData =asyncHandler (async (req:UserDataRequest, res:Response,next:Next
    return    next(new ApiError(404,"User Not found"))
     }
 
+    logger.info("populated contacts of user",user);
 
-  res.status(200).json(user);
   res
     .status(200)
     .json(new ApiResponse(200,user,"User Data sended Succesfully"))
-
-
-
 })
 
 const AllUserList = asyncHandler(async (req:Request, res:Response,next:NextFunction) => {
@@ -522,8 +603,10 @@ export {
   logoutUser,
   loginUser,
   forgotPassword,
-  verifyForgotPassword,
+  verifyForgotPasswordOtp,
   updateAvatar,
   userData,
   AllUserList,
+  refreshAccessToken,
+  resetPassword,
 }
