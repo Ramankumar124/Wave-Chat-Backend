@@ -1,3 +1,4 @@
 node_modules
 # wave-chat-2f232-firebase-adminsdk.json
 .env
+app.log

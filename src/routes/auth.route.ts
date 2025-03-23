@@ -15,7 +15,7 @@ router.route('/resendEmail').post(resendEmail);
 router.route('/forgotPassword').post(forgotPassword);
 router.route('/resetPassword').post(resetPassword);
 router.route('/verifyForgotPasswordOtp').post(verifyForgotPasswordOtp);
-router.route('/logout').get(jwtVerify,logoutUser );
+router.route('/logout').post(jwtVerify,logoutUser );
 router.route('/getUserData').get(jwtVerify,userData);
 router.route('/get-all-users').get(AllUserList);
 router.route('/updateAvatar').post(upload.fields([{name:"avatar",maxCount:1}]),jwtVerify,updateAvatar);

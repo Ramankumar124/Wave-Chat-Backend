@@ -2,9 +2,7 @@ import mongoose from 'mongoose';
 
 const DBConnection=async()=>{
     try {
-        // console.log(process.env.);
-        
-        const connection=await mongoose.connect('mongodb://localhost:27017/wave-chat-test');
+        const connection=await mongoose.connect(process.env.MONGO_URL as string);
         console.log(`connection successfully ${connection.connection.host}`);
         
     } catch (error) {
@@ -12,4 +10,4 @@ const DBConnection=async()=>{
         process.exit(1);
     }
 }
-export { DBConnection}
+export {DBConnection}

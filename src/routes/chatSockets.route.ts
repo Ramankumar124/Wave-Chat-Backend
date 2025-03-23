@@ -116,9 +116,9 @@ console.log("ReciverID",receiverId);
   });
 
   socket.on('Typing-indicator', async (roomId: string, senderId: string) => {
-    io.to(roomId).emit('Typing', roomId, senderId);
+    let IncomingSenderId=senderId;
+    io.to(roomId).emit('Typing',roomId,IncomingSenderId);
   });
-
   socket.on('Stop-typing', async (roomId: string) => {
     io.to(roomId).emit('typing-stop');
   });
@@ -139,9 +139,6 @@ console.log("ReciverID",receiverId);
   });
 
   socket.on('SendFreindRequest', async (senderEmail: string, reciverEmail: string) => {
-    console.log("sender email", senderEmail);
-    console.log("reciver email", reciverEmail);
-
     const sender :any = await User.findOne({ email: senderEmail })
       .populate('friendRequest.sent')
       .populate('friendRequest.received')
@@ -186,8 +183,6 @@ console.log("ReciverID",receiverId);
           .populate('contacts');
 
         const senderChanges = updatedUser.friendRequest.sent;
-        const reciverChanges = updateRecevierUser.friendRequest.received;
-
         console.log(`${sender.email} added ${reciver.email} to the sent list.`);
 
         try {
@@ -200,12 +195,12 @@ console.log("ReciverID",receiverId);
         io.to(reciver._id.toString()).emit('IncomingfriendRequest', {
           sender: {
             name: sender.name,
-            profilePicture: sender.profilePicture,
+            profilePicture: sender.avatar.url,
             email: sender.email,
           },
           reciver: {
             name: reciver.name,
-            profilePicture: reciver.profilePicture,
+            profilePicture: reciver.avatar.url,
             email: reciver.email,
           },
         });
