@@ -5,21 +5,22 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-import {authRoutes} from "./routes/auth.route";
-import {ChatRoutes} from "./routes/chat.route";
-import {notificationRoute} from "./routes/FireBaseNotificaton.route";
+import { authRoutes } from "./routes/auth.route";
+import { ChatRoutes } from "./routes/chat.route";
+import { notificationRoute } from "./routes/FireBaseNotificaton.route";
 import gemmniChat from "./routes/gemmniChat.route";
 import logger from "./utils/logger";
 import morgan from "morgan";
 import { errorHandler } from "./middlewares/ErrorHandler.middleware";
-const app: Express = express(); 
+import { jwtVerify } from "./middlewares/verify.middleware";
+const app: Express = express();
 
 const morganFormat = ":method :url :status :response-time ms";
 
 app.use(
   morgan(morganFormat, {
     stream: {
-      write: (message:any) => {
+      write: (message: any) => {
         const logObject = {
           method: message.split(" ")[0],
           url: message.split(" ")[1],
@@ -45,7 +46,7 @@ const ALLOWED_ORIGINS: string[] = [
 
 app.use(
   cors({
-    origin:"http://localhost:5173",
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   })
 );
@@ -53,12 +54,12 @@ app.use(
 try {
   // Routes
   app.use("/api/v1/auth", authRoutes);
-  app.use("/api/v1/chat", ChatRoutes);
-  app.use("/api/v1/Notification", notificationRoute);
+  app.use("/api/v1/chat", jwtVerify, ChatRoutes);
+  app.use("/api/v1/Notification", jwtVerify, notificationRoute);
   app.get("/gemmniChat", gemmniChat);
   app.use(errorHandler);
-} catch (error) {
-  console.log(error);
+} catch (error:any) {
+  console.log(error?.message);
 }
 
 export default app;

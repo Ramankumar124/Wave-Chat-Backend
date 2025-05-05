@@ -11,6 +11,5 @@ const gemmniChat = async (req: Request, res: Response) => {
 
     const result = await model.generateContent(prompt);
     res.status(200).json({ response: result.response });
-    // console.log(result.response.text());
 }
 export default gemmniChat

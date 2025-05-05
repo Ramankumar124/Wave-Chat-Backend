@@ -105,7 +105,7 @@ userSchema.methods.createAccessToken = function () {
   //@ts-ignore
 
   return jwt.sign(
-    { _id: this._id, name: this.name, email: this.email },
+    { id: this._id, name: this.name, email: this.email },
     process.env.ACCESS_TOKEN_SECRET as string,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY!}
   );

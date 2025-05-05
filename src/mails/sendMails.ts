@@ -41,9 +41,9 @@ const EmailOption={
 
 try {
     await transporter.sendMail(EmailOption)
-} catch (error) {
+} catch (error:any) {
     ("Email service failed silently. Make sure you have provided your MAILTRAP credentials in the .env file");
-    console.log(error);
+    console.log(error?.message);
 }
 }
 

@@ -35,7 +35,6 @@ export const getUserChat = asyncHandler(
     })) as unknown as ChatDocument;
 
     if (!chat) {
-      console.log("No chat found");
       return next(new ApiError(404, "No Chat Found"));
     }
 

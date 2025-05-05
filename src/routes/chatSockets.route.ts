@@ -53,31 +53,23 @@ const handleChatSockets = (socket: Socket, io: Server) => {
         email: data.email
       });
     }
-    console.log(`${data.name} with id ${data._id} joined server socket`);
-    console.log("online users ", onlineUser);
-
     io.emit("Online-Users", onlineUser);
   });
 
   socket.on("disconnect", () => {
-    console.log("user disconnected:", socket.id);
     let newOnlineUser = onlineUser.filter((user) => user.OrignalSocketId !== socket.id);
     onlineUser = newOnlineUser;
-    console.log("online users left after someone left", onlineUser);
     io.emit("Online-Users", onlineUser);
   });
 
   socket.on('join-room', ({ senderId,receiverId }: { senderId: string;receiverId: string }) => {
     const room=[senderId,receiverId].sort().join("_");
     socket.join(room);
-    console.log(`${senderId} joined room: ${room}`);
   });
 
   socket.on('sendMessage', async (data: MessageData) => {
     const { message, senderId, receiverId, reciverFBToken, reciverName } = data;
     const room=[senderId,receiverId].sort().join("_");
-console.log("senderID",senderId);
-console.log("ReciverID",receiverId);
 
 
     io.to(room).emit('receiveMessage', { message,senderId,receiverId });
@@ -86,7 +78,6 @@ console.log("ReciverID",receiverId);
     let sender = connection.find((user) => user.socketId ==senderId);
     if (reciver) {
       io.to(reciver.socketId).emit("notify", { message,senderId,senderName: sender?.username });
-      console.log("send notification to ", reciver.socketId);
     }
 
     // // send notification with firebase 
@@ -163,7 +154,6 @@ console.log("ReciverID",receiverId);
       );
 
       if (alreadySent) {
-        console.log(`${reciver.email} is already in the sent list.`);
         return;
       } else {
         const updatedUser :any = await User.findOneAndUpdate(
@@ -183,14 +173,12 @@ console.log("ReciverID",receiverId);
           .populate('contacts');
 
         const senderChanges = updatedUser.friendRequest.sent;
-        console.log(`${sender.email} added ${reciver.email} to the sent list.`);
 
         try {
           io.to(sender._id.toString()).emit('FriendRequestSended', senderChanges);
-        } catch (error) {
-          console.log(error);
+        } catch (error:any) {
+          console.log(error?.message);
         }
-        console.log("friend request sended to ", sender._id);
 
         io.to(reciver._id.toString()).emit('IncomingfriendRequest', {
           sender: {
@@ -233,7 +221,6 @@ console.log("ReciverID",receiverId);
       { new: true, upsert: false }
     ).populate('contacts');
 
-    console.log("updated user with new contact which is ", updatedReciverUser);
     const reciverChanges = updatedReciverUser.contacts;
     const senderChanges = updatedSenderUser.contacts;
 
@@ -261,8 +248,6 @@ console.log("ReciverID",receiverId);
           (request: any) => request.email !== reciverEmail
         );
         await senderUser.save();
-
-        console.log("Friend requests updated successfully");
       } catch (error:any) {
         console.error("Error removing friend requests:", error.message);
       }

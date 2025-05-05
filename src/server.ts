@@ -26,7 +26,6 @@ try {
     
     handleChatSockets(socket, io);
   });
-  console.log("socket working perfectly");
 } catch (error) {
   console.log("socket error", error);
 }

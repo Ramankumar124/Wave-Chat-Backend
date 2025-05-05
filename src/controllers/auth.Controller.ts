@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
-import bcrypt from "bcrypt";
-import { generateToken } from "../utils/genrateToken";
+
 import {
   changePasswordSchema,
   forgotPasswordSchema,
@@ -21,7 +20,7 @@ import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudnary";
 import logger from "../utils/logger";
 
 interface UserDataRequest extends Request {
-  user?:{email:string};
+  user?: { email: string };
 }
 
 const genrerateAccessAndRefreshToken = async (userId: string) => {
@@ -36,8 +35,8 @@ const genrerateAccessAndRefreshToken = async (userId: string) => {
     await user.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
-  } catch (error) {
-    console.log(error);
+  } catch (error:any) {
+    console.log(error?.message);
     throw new ApiError(500, "Something went wrong while gernrating tokens");
   }
 };
@@ -47,45 +46,43 @@ const registerUser = asyncHandler(async function (
   res: Response,
   next: NextFunction
 ) {
-  console.log(req.body);
   const { email, password, name, bio } = registerSchema.parse(req.body);
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return next(new ApiError(400, "User already exists"));
   }
-  
-  let uploadAvatar={
-    url:"",
-    public_id:"",
+
+  let uploadAvatar = {
+    url: "",
+    public_id: "",
+  };
+  //@ts-ignore
+  if (req?.files?.avatar?.length > 0) {
+    const files = req.files as {
+      [key: string]: Express.Multer.File[];
+    };
+
+    const localFilepath = files?.avatar[0].path;
+    const data = await uploadToCloudinary(localFilepath);
+
+    uploadAvatar.public_id = data?.public_id!;
+    uploadAvatar.url = data?.url!;
+    if (!uploadAvatar) {
+      return next(new ApiError(400, "avatar upload failed"));
+    }
   }
-//@ts-ignore
-if(req?.files?.avatar?.length>0){
-const files=req.files as{
-  [key: string]: Express.Multer.File[];
-};
-
-const localFilepath=files?.avatar[0].path;
-const data=await uploadToCloudinary(localFilepath);
-
-uploadAvatar.public_id = data?.public_id!;
-uploadAvatar.url = data?.url!;
-if(!uploadAvatar){
-  return next(new ApiError(400, "avatar upload failed"));
-}
-}
   const user = await User.create({
     email,
     password,
     name,
     bio,
-    avatar:{
+    avatar: {
       url: uploadAvatar.url,
       public_id: uploadAvatar.public_id,
-    }
+    },
   });
 
-  
   user.otp = generateOtp();
   const token = await user.generateToken(user.otp, user.id);
   await user.save({ validateBeforeSave: false });
@@ -108,7 +105,6 @@ if(!uploadAvatar){
     secure: true,
     sameSite: "none" as const,
     maxAge: 1000 * 60 * 60,
-    
   };
   res
     .status(200)
@@ -117,53 +113,51 @@ if(!uploadAvatar){
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
-      throw new ApiError(401, "unauthorized request")
+    throw new ApiError(401, "unauthorized request");
   }
 
   try {
-      const decodedToken:any = jwt.verify(
-          incomingRefreshToken,
-          process.env.REFRESH_TOKEN_SECRET as string
-      )
-  
-      const user = await User.findById(decodedToken?._id)
-  
-      if (!user) {
-          throw new ApiError(401, "Invalid refresh token")
-      }
-  
-      if (incomingRefreshToken !== user?.refreshToken) {
-          throw new ApiError(401, "Refresh token is expired or used")
-          
-      }
-  
-      const options = {
-          httpOnly: true,
-          secure: true,
-          
-      }
-  //@ts-ignore
-      const {accessToken, newRefreshToken} = await genrerateAccessAndRefreshToken(user._id)
-  
-      return res
+    const decodedToken: any = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET as string
+    );  
+
+    const user = await User.findById(decodedToken?.id);
+
+    if (!user) {
+      throw new ApiError(402, "Invalid refresh token");
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(403, "Refresh token is expired or used");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    //@ts-ignore
+const { accessToken, newRefreshToken } =await genrerateAccessAndRefreshToken(user._id);
+
+    return res
       .status(200)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", newRefreshToken, options)
       .json(
-          new ApiResponse(
-              200, 
-              {accessToken, refreshToken: newRefreshToken},
-              "Access token refreshed"
-          )
-      )
-  } catch (error:any) {
-      throw new ApiError(401, error?.message || "Invalid refresh token")
+        new ApiResponse(
+          200,
+          { accessToken, refreshToken: newRefreshToken },
+          "Access token refreshed"
+        )
+      );
+  } catch (error: any) {
+    throw new ApiError(401, error?.message || "Invalid refresh token");
   }
-
-})
+});
 const verifyEmail = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { otp } = verifyOtp.parse(req.body);
@@ -179,7 +173,6 @@ const verifyEmail = asyncHandler(
       process.env.OTP_SECRET as string
     );
 
-    
     if (decodedToken?.otp !== otp) {
       return next(new ApiError(401, "invalid otp"));
     }
@@ -230,17 +223,18 @@ const resendEmail = asyncHandler(
       maxAge: 1000 * 60 * 60,
     };
 
- 
-      res
-        .status(204)
-        //@ts-ignore
-        .cookie("verifyUser", token, options)
-        .json(new ApiResponse(200, {}, "email resend successfully"));
-  
+    res
+      .status(204)
+      //@ts-ignore
+      .cookie("verifyUser", token, options)
+      .json(new ApiResponse(200, {}, "email resend successfully"));
   }
 );
-const loginUser = asyncHandler(async function (req: Request,res: Response,next: NextFunction) {
-  
+const loginUser = asyncHandler(async function (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   const { email, password } = signinSchema.parse(req.body);
 
   const user = await User.findOne({ email });
@@ -256,23 +250,24 @@ const loginUser = asyncHandler(async function (req: Request,res: Response,next: 
   const { accessToken, refreshToken } = await genrerateAccessAndRefreshToken(
     user.id
   );
-
-  const logedInUser = await User.findById(user._id).select(
-    "-password -refreshToken -otp"
-  ).populate([
-    {
-      path: 'contacts',
-      select: '-password  -contacts -refreshToken -otp'
-    },
-    {
-      path: 'friendRequest.sent', // Path to populate friendRequest.sent
-      select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp' // Fields to exclude or include
-    },
-    {
-      path: 'friendRequest.received', // If you want to populate received friend requests as well
-      select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp'
-    }
-  ]);
+  const logedInUser = await User.findById(user._id)
+    .select("-password -refreshToken -otp")
+    .populate([
+      {
+        path: "contacts",
+        select: "-password  -contacts -refreshToken -otp",
+      },
+      {
+        path: "friendRequest.sent", // Path to populate friendRequest.sent
+        select:
+          "-password -firebaseToken -contacts -friendRequest -refreshToken -otp", // Fields to exclude or include
+      },
+      {
+        path: "friendRequest.received", // If you want to populate received friend requests as well
+        select:
+          "-password -firebaseToken -contacts -friendRequest -refreshToken -otp",
+      },
+    ]);
   if (!logedInUser) {
     return next(new ApiError(400, "Something went wrong while signing user"));
   }
@@ -318,8 +313,6 @@ const logoutUser = asyncHandler(
   }
 );
 
-
-
 const forgotPassword = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { email } = forgotPasswordSchema.parse(req.body);
@@ -355,8 +348,6 @@ const forgotPassword = asyncHandler(
 const verifyForgotPasswordOtp = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { otp } = verifyForgotPasswordSchema.parse(req.body);
-console.log(typeof otp,otp);
-logger.debug(typeof otp,otp)
     const token = req.cookies?.verifyUser;
     if (!token) {
       return next(new ApiError(401, "invalid token"));
@@ -384,14 +375,15 @@ logger.debug(typeof otp,otp)
 
     await user.save({ validateBeforeSave: false });
     //@ts-ignore
-    const changPasswordToken=await jwt.sign({
-      id: user.id
-    },
-    process.env.OTP_SECRET as string,
+    const changPasswordToken = await jwt.sign(
       {
-        expiresIn: process.env.OTP_EXPAIRY ,
+        id: user.id,
+      },
+      process.env.OTP_SECRET as string,
+      {
+        expiresIn: process.env.OTP_EXPAIRY,
       }
-    )
+    );
     const options = {
       httpOnly: true,
       sameSite: "none" as const,
@@ -400,24 +392,24 @@ logger.debug(typeof otp,otp)
     };
     return res
       .status(201)
-      .cookie("changePassword",changPasswordToken,options)
+      .cookie("changePassword", changPasswordToken, options)
       .clearCookie("verifyUser", options)
       .json(new ApiResponse(201, user, "Email verified successfully"));
   }
 );
 
-const resetPassword=asyncHandler(
-  async(req:Request,res:Response,next:NextFunction)=>{
-    const {password}=changePasswordSchema.parse(req.body);
-    const token=req.cookies?.changePassword;
-    if(!token){
+const resetPassword = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { password } = changePasswordSchema.parse(req.body);
+    const token = req.cookies?.changePassword;
+    if (!token) {
       return next(new ApiError(401, "invalid token"));
     }
     const decodedToken = await jwt.verify(
       token,
       process.env.OTP_SECRET as string
     );
-//@ts-ignore
+    //@ts-ignore
     const user = await User.findById(decodedToken.id).select(
       "-password -refreshToken"
     );
@@ -426,7 +418,7 @@ const resetPassword=asyncHandler(
       return next(new ApiError(400, "Unable to changee password"));
     }
 
-    user.password=password;
+    user.password = password;
     await user.save({ validateBeforeSave: false });
     const options = {
       httpOnly: true,
@@ -439,9 +431,8 @@ const resetPassword=asyncHandler(
       .clearCookie("changePassword", options)
       .json(new ApiResponse(201, {}, "Password changed successfully"));
   }
-
-)
-const updateAvatar=asyncHandler(
+);
+const updateAvatar = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     //@ts-ignore
     const user = await User.findById(req.user?._id);
@@ -481,10 +472,6 @@ const updateAvatar=asyncHandler(
       return next(new ApiError(400, "avatar upload failed"));
     }
 
-
-
-  
-
     const updatedUser = await User.findByIdAndUpdate(
       //@ts-ignore
       req.user?._id,
@@ -497,21 +484,22 @@ const updateAvatar=asyncHandler(
       {
         new: true,
       }
-    ).select('-password') // Exclude the password field
-    .populate([
-      {
-        path: 'contacts',
-        select: '-password  -contacts'
-      },
-      {
-        path: 'friendRequest.sent', // Path to populate friendRequest.sent
-        select: '-password -firebaseToken -contacts -friendRequest' // Fields to exclude or include
-      },
-      {
-        path: 'friendRequest.received', // If you want to populate received friend requests as well
-        select: '-password -firebaseToken -contacts -friendRequest'
-      }
-    ]);;  
+    )
+      .select("-password") // Exclude the password field
+      .populate([
+        {
+          path: "contacts",
+          select: "-password  -contacts",
+        },
+        {
+          path: "friendRequest.sent", // Path to populate friendRequest.sent
+          select: "-password -firebaseToken -contacts -friendRequest", // Fields to exclude or include
+        },
+        {
+          path: "friendRequest.received", // If you want to populate received friend requests as well
+          select: "-password -firebaseToken -contacts -friendRequest",
+        },
+      ]);
 
     if (!updatedUser) {
       return next(new ApiError(400, "avatar Update failed"));
@@ -521,50 +509,56 @@ const updateAvatar=asyncHandler(
       .status(200)
       .json(new ApiResponse(200, updatedUser, "avatar update successfully"));
   }
-)
-const userData =asyncHandler (async (req:UserDataRequest, res:Response,next:NextFunction) => {
+);
+const userData = asyncHandler(
+  async (req: UserDataRequest, res: Response, next: NextFunction) => {
+    const user = await User.findOne({
+      email: (req.user as { email: string }).email,
+    })
+      .select("-password -refreshToken -otp") // Exclude the password field
+      .populate([
+        {
+          path: "contacts",
+          select: "-password  -contacts -refreshToken -otp",
+        },
+        {
+          path: "friendRequest.sent", // Path to populate friendRequest.sent
+          select:
+            "-password -firebaseToken -contacts -friendRequest -refreshToken -otp", // Fields to exclude or include
+        },
+        {
+          path: "friendRequest.received", // If you want to populate received friend requests as well
+          select:
+            "-password -firebaseToken -contacts -friendRequest -refreshToken -otp",
+        },
+      ]);
 
-  const user = await User.findOne({ email: (req.user as  {email:string}).email  })
-    .select('-password -refreshToken -otp') // Exclude the password field
-    .populate([
-      {
-        path: 'contacts',
-        select: '-password  -contacts -refreshToken -otp'
-      },
-      {
-        path: 'friendRequest.sent', // Path to populate friendRequest.sent
-        select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp' // Fields to exclude or include
-      },
-      {
-        path: 'friendRequest.received', // If you want to populate received friend requests as well
-        select: '-password -firebaseToken -contacts -friendRequest -refreshToken -otp'
-      }
-    ]);
-
-    if(!user){
-   return    next(new ApiError(404,"User Not found"))
+    if (!user) {
+      return next(new ApiError(404, "User Not found"));
     }
 
-    logger.info("populated contacts of user",user);
+    logger.info("populated contacts of user", user);
 
-  res
-    .status(200)
-    .json(new ApiResponse(200,user,"User Data sended Succesfully"))
-})
-
-const AllUserList = asyncHandler(async (req:Request, res:Response,next:NextFunction) => {
-
-
-  const users = await User.find().select('-password -firebaseToken -contacts -friendRequest');
-
-  if(!users){
-    return    next(new ApiError(404,"User Not found"));
+    res
+      .status(200)
+      .json(new ApiResponse(200, user, "User Data sended Succesfully"));
   }
-res
-.status(200)
-.json(new ApiResponse(200,users,"All users Sended Successfully"));
+);
 
-})
+const AllUserList = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const users = await User.find().select(
+      "-password -firebaseToken -contacts -friendRequest"
+    );
+
+    if (!users) {
+      return next(new ApiError(404, "User Not found"));
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, users, "All users Sended Successfully"));
+  }
+);
 // const googleLogin = asyncHandler(
 //   async function (req:Request, res:Response) {
 //   const { data } = req.body;
@@ -595,7 +589,6 @@ res
 
 // });
 
-
 export {
   registerUser,
   verifyEmail,
@@ -609,4 +602,4 @@ export {
   AllUserList,
   refreshAccessToken,
   resetPassword,
-}
+};
